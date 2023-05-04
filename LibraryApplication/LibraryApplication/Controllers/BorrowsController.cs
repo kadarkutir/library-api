@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Xml.Linq;
 
 namespace LibraryApplication.Controllers
 {
@@ -11,13 +12,13 @@ namespace LibraryApplication.Controllers
 
         public BorrowsController(LibraryContext libraryContext)
         {
-            _libraryContext = libraryContext;
+            this._libraryContext = libraryContext;
         }
 
         [HttpGet]
         public async Task<ActionResult<IEnumerable<Borrow>>> Get()
         {
-            var loans = from borrow in this._libraryContext.Borrows
+            var borrows = from borrow in this._libraryContext.Borrows
                         join people in this._libraryContext.Users on borrow.ReaderNumber equals people.ReaderNumber
                         join book in this._libraryContext.Books on borrow.InventoryNumber equals book.InventoryNumber
                         select new
@@ -28,29 +29,28 @@ namespace LibraryApplication.Controllers
                             BorrowDate = borrow.BorrowDate,
                             ReturnDate = borrow.ReturnDate,
                         };
-            return this.Ok(loans);
+            return this.Ok(borrows);
         }
 
         [HttpGet("/{name}/borrows")]
-        public async Task<ActionResult<IEnumerable<Dictionary<string,DateTime>>>> Get(string name)
+        public async Task<ActionResult<List<Dictionary<string, object>>>> Get(string name)
         {
-            var user = await _libraryContext.Users.FirstOrDefaultAsync(u => u.Name == name);
+            var user = await this._libraryContext.Users.FirstOrDefaultAsync(u => u.Name == name);
 
             if (user == null)
             {
-                return NotFound();
+                return this.NotFound();
             }
 
-            var result = _libraryContext.Users
+            var result = await this._libraryContext.Users
                 .Where(u => u.Name == name)
                 .Join(
-                    _libraryContext.Borrows,
+                    this._libraryContext.Borrows,
                     user => user.ReaderNumber,
                     borrow => borrow.ReaderNumber,
-                    (user, borrow) => new { User = user, Borrow = borrow }
-                )
+                    (user, borrow) => new { User = user, Borrow = borrow })
                 .Join(
-                    _libraryContext.Books,
+                    this._libraryContext.Books,
                     b => b.Borrow.InventoryNumber,
                     book => book.InventoryNumber,
                     (b, book) => new { Book = book, Borrow = b.Borrow }
@@ -59,9 +59,9 @@ namespace LibraryApplication.Controllers
                 {
                     { "Title", b.Book.Title },
                     { "ReturnDate", b.Borrow.ReturnDate },
-                }).ToList();
+                }).ToListAsync();
 
-            return Ok(result);
+            return this.Ok(result);
         }
 
         [HttpPost]

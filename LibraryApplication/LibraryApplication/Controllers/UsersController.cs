@@ -1,6 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using System.Xml.Linq;
 
 namespace LibraryApplication.Controllers
 {
@@ -12,7 +11,7 @@ namespace LibraryApplication.Controllers
 
         public UsersController(LibraryContext libraryContext)
         {
-            _libraryContext = libraryContext;
+            this._libraryContext = libraryContext;
         }
 
         /// <summary>
@@ -41,25 +40,23 @@ namespace LibraryApplication.Controllers
                 return this.NotFound();
             }
 
-            var borrowedBooks =  _libraryContext.Users
+            var borrowedBooks = await this._libraryContext.Users
                 .Where(u => u.ReaderNumber == id)
                 .Join(
-                    _libraryContext.Borrows,
+                    this._libraryContext.Borrows,
                     user => user.ReaderNumber,
                     borrow => borrow.ReaderNumber,
-                    (user, borrow) => new { User = user, Borrow = borrow }
-                )
+                    (user, borrow) => new { User = user, Borrow = borrow })
                 .Join(
-                    _libraryContext.Books,
+                    this._libraryContext.Books,
                     b => b.Borrow.InventoryNumber,
                     book => book.InventoryNumber,
-                    (b, book) => new { Book = book, Borrow = b.Borrow }
-                )
+                    (b, book) => new { Book = book, Borrow = b.Borrow })
                 .Select(b => new Dictionary<string, object>
                 {
                     { "Title", b.Book.Title },
                     { "ReturnDate", b.Borrow.ReturnDate },
-                }).ToList();
+                }).ToListAsync();
 
             var result = new Dictionary<string, object>
             {
@@ -79,7 +76,7 @@ namespace LibraryApplication.Controllers
             this._libraryContext.Users.Add(user);
             await this._libraryContext.SaveChangesAsync();
 
-            return Ok();
+            return this.Ok();
         }
 
         [HttpPut("{id}")]

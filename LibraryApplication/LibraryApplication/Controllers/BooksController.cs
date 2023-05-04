@@ -11,7 +11,7 @@ namespace LibraryApplication.Controllers
 
         public BooksController(LibraryContext libraryContext)
         {
-            _libraryContext = libraryContext;
+            this._libraryContext = libraryContext;
         }
 
         [HttpGet]
@@ -22,31 +22,32 @@ namespace LibraryApplication.Controllers
         }
 
         [HttpGet("{id}")]
-        public ActionResult Get(int id)
+        public async Task<ActionResult> Get(int id)
         {
-            var book = _libraryContext.Books
+            var book = await this._libraryContext.Books
                 .Where(b => b.InventoryNumber == id)
-                .Select(b => new 
+                .Select(b => new
                 {
                     Title = b.Title,
-                    Status = _libraryContext.Borrows
+                    Status = this._libraryContext.Borrows
                         .Where(br => br.InventoryNumber == id)
                         .Any() ? "borrowed" : "in",
-                    BorrowerName = _libraryContext.Borrows
+                    BorrowerName = this._libraryContext.Borrows
                         .Where(br => br.InventoryNumber == id)
-                        .Join(_libraryContext.Users,
+                        .Join(
+                            this._libraryContext.Users,
                             br => br.ReaderNumber,
                             u => u.ReaderNumber,
-                            (br,u) => u.Name)
+                            (br, u) => u.Name)
                         .FirstOrDefault(),
-                    ReturnDate = _libraryContext.Borrows
+                    ReturnDate = this._libraryContext.Borrows
                         .Where(br => br.InventoryNumber == id)
                         .Select(br => br.ReturnDate)
                         .FirstOrDefault(),
                 })
-                .FirstOrDefault();
+                .FirstOrDefaultAsync();
 
-            if (book is null) 
+            if (book is null)
             {
                 return this.NotFound();
             }
@@ -60,7 +61,7 @@ namespace LibraryApplication.Controllers
             this._libraryContext.Books.Add(book);
             await this._libraryContext.SaveChangesAsync();
 
-            return Ok();
+            return this.Ok();
         }
 
         [HttpPut("{id}")]
